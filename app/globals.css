@@ -1,26 +1,192 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Gallery Color Palette - REAL gallery feel */
+  --color-gallery-wall: #f7f5f2;
+  --color-gallery-white: #ffffff;
+  --color-gallery-cream: #f0ece4;
+  --color-gallery-text: #1a1a1a;
+  --color-gallery-text-muted: #4a4a4a;
+  --color-gallery-text-light: #7a7a7a;
+  --color-gallery-border: #d0d0d0;
+  --color-gallery-border-light: #e8e8e8;
+  --color-gallery-accent: #c9a96e;
+  --color-gallery-accent-dark: #a08050;
+  --color-gallery-frame: #2a2a2a;
+  --color-gallery-frame-light: #3a3a3a;
+  --color-gallery-shadow: rgba(0, 0, 0, 0.12);
+  --color-gallery-shadow-heavy: rgba(0, 0, 0, 0.2);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background: var(--color-gallery-wall);
+  }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  body {
+    background: var(--color-gallery-wall);
+    color: var(--color-gallery-text);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-family: 'Cormorant Garamond', 'Georgia', serif;
+  }
+
+  ::selection {
+    background: rgba(201, 169, 110, 0.2);
+    color: #1a1a1a;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* Real gallery frame - dark, heavy, dramatic */
+  .gallery-frame {
+    position: relative;
+    background: #ffffff;
+    border: 12px solid #2a2a2a;
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.15),
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      0 24px 64px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.5s ease, transform 0.5s ease;
+  }
+
+  .gallery-frame:hover {
+    box-shadow: 
+      0 4px 16px rgba(0, 0, 0, 0.2),
+      0 16px 48px rgba(0, 0, 0, 0.15),
+      0 32px 80px rgba(0, 0, 0, 0.1);
+    transform: translateY(-4px);
+  }
+
+  /* Inner matting like real gallery */
+  .gallery-frame::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 24px solid #f5f5f0;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  /* Plaque - brass/metal look */
+  .gallery-plaque {
+    background: linear-gradient(
+      135deg,
+      #f5f5f0 0%,
+      #e8e4dc 100%
+    );
+    border: 1px solid #d0d0d0;
+    box-shadow: 
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      0 2px 4px rgba(0, 0, 0, 0.06);
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  /* Track lighting effect */
+  .spotlight {
+    position: relative;
+  }
+
+  .spotlight::after {
+    content: '';
+    position: absolute;
+    top: -60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 200px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.4) 0%,
+      rgba(255, 255, 255, 0.1) 30%,
+      transparent 100%
+    );
+    filter: blur(20px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .support-button {
+    background: #1a1a1a;
+    color: #ffffff;
+    border: 2px solid #1a1a1a;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .support-button:hover {
+    background: #c9a96e;
+    border-color: #c9a96e;
+    color: #1a1a1a;
+    box-shadow: 0 8px 24px rgba(201, 169, 110, 0.3);
+  }
+
+  .gallery-divider {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      #c9a96e 20%,
+      #c9a96e 80%,
+      transparent 100%
+    );
+  }
+}
+
+@layer utilities {
+  .font-serif-display {
+    font-family: 'Cormorant Garamond', 'Georgia', serif;
+  }
+
+  .font-sans-gallery {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  .text-gallery-muted {
+    color: #4a4a4a;
+  }
+
+  .text-gallery-light {
+    color: #7a7a7a;
+  }
+
+  .bg-gallery-wall {
+    background: #f7f5f2;
+  }
+
+  .bg-gallery-white {
+    background: #ffffff;
+  }
+
+  .border-gallery {
+    border-color: #d0d0d0;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f7f5f2;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c9a96e;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a08050;
+}
+
+/* Marquee */
+@keyframes marquee-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee-gallery {
+  animation: marquee-scroll 40s linear infinite;
 }
