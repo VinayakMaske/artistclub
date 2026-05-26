@@ -418,7 +418,7 @@ export default function HomePage() {
               <div className="space-y-4 md:space-y-6 text-[#4a4a4a] leading-[1.8] md:leading-[1.9] font-light text-sm md:text-base mb-8 md:mb-10">
                 <p>
                   Are you an artist looking for a platform that values your work and connects 
-                  you directly with patrons who care? PalettePune is built for creators like you.
+                  you directly with patrons who care? ArtistClub is built for creators like you.
                 </p>
                 <p>
                   Every month, we select five artists to showcase their work. The community 

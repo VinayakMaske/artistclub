@@ -17,7 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'PalettePune — Museum of Contemporary Art',
+  title: 'ArtistClub — Museum of Contemporary Art',
   description: 'Five artists. One month. You decide who deserves the spotlight. Support real art, fund real artists, become part of the story.',
 };
 
