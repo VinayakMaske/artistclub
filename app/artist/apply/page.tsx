@@ -581,6 +581,7 @@ export default function ArtistApplyPage() {
                     </button>
                     <p className="text-center text-xs text-[#7a7a7a] font-sans-gallery mt-4">
                       By submitting, you agree that your application will be reviewed before going live.
+                      For any queries contact us on supportartistclub@gmail.com
                     </p>
                   </div>
                 </form>
