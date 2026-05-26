@@ -46,7 +46,7 @@ export default function MuseumNav() {
             </motion.div>
             <div>
               <span className="text-lg font-serif-display text-[#1a1a1a] tracking-wide font-semibold">
-                Palette<span className="text-[#c9a96e]">Pune</span>
+                Artist<span className="text-[#c9a96e]">Club</span>
               </span>
               <span className="block text-[9px] text-[#7a7a7a] tracking-[0.3em] uppercase font-sans-gallery font-medium">
                 Gallery of Contemporary Art
