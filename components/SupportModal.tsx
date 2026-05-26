@@ -222,7 +222,7 @@ export default function SupportModal({
               </button>
 
               <p className="text-[10px] text-[#c9a96e] tracking-[0.3em] uppercase font-sans-gallery mb-3 font-semibold">
-                Support This Artwork
+                Support
               </p>
               <h3 className="text-2xl font-serif-display text-[#1a1a1a] leading-tight font-semibold">
                 {artworkTitle}

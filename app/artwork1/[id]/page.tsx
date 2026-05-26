@@ -570,7 +570,7 @@ export default function ArtworkPage() {
                   onClick={() => setSupportModalOpen(true)}
                   className="flex-1 py-4 bg-[#1a1a1a] text-white text-sm font-semibold rounded-xl hover:bg-[#c9a96e] hover:text-[#1a1a1a] transition-all duration-500 font-sans-gallery"
                 >
-                  <Heart className="w-4 h-4 inline mr-2" />Support This Artwork
+                  <Heart className="w-4 h-4 inline mr-2" />Support
                 </button>
                 <button
                   onClick={() => setAuctionModalOpen(true)}
