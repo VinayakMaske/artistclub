@@ -3,7 +3,7 @@
 
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Heart, Sparkles, Eye, Crown, Star, Loader2, Upload, User } from 'lucide-react';
+import { X, Heart, Sparkles, Eye, Crown, Star, Loader2, Upload, User, ArrowRight } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
 
 interface SupportModalProps {
@@ -66,10 +66,12 @@ export default function SupportModal({
   const [selectedTier, setSelectedTier] = useState(99);
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
-  const [step, setStep] = useState<'select' | 'details' | 'success'>('select');
+  const [step, setStep] = useState<'select' | 'details' | 'processing' | 'success' | 'error'>('select');
   const [processing, setProcessing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Avatar state
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -110,50 +112,68 @@ export default function SupportModal({
   };
 
   const handleSupport = async () => {
-    const selectedTierData = TIERS.find((t) => t.amount === selectedTier);
-
-    let avatarUrl = null;
-    if (avatarFile && !isAnonymous) {
-      avatarUrl = await uploadAvatar(avatarFile);
+    if (!isAnonymous && !displayName.trim()) return;
+    if (!email.trim()) {
+      setErrorMsg('Email is required for payment');
+      return;
     }
 
-    const supporter = {
-      id: Math.random().toString(36).substr(2, 9),
-      display_name: isAnonymous ? 'Anonymous Patron' : displayName || 'Anonymous',
-      amount: selectedTier,
-      message: message || null,
-      badge: selectedTierData?.badge || 'Bronze Patron',
-      created_at: new Date().toISOString(),
-      is_anonymous: isAnonymous,
-      avatar_url: isAnonymous ? null : avatarUrl,
-    };
-
+    const selectedTierData = TIERS.find((t) => t.amount === selectedTier);
     setProcessing(true);
+    setErrorMsg('');
 
     try {
-      const { error } = await supabase.from('supporters').insert([
-        {
-          artwork_id: artworkId,
+      // Upload avatar if provided
+      let avatarUrl = null;
+      if (avatarFile && !isAnonymous) {
+        avatarUrl = await uploadAvatar(avatarFile);
+      }
+
+      // Create Instamojo payment request via API route
+      const response = await fetch('/api/instamojo/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           amount: selectedTier,
-          display_name: supporter.display_name,
-          email: email || null,
-          is_anonymous: isAnonymous,
-          message: message || null,
-          avatar_url: supporter.avatar_url,
-          payment_status: 'completed',
-          payment_id: `demo_${Date.now()}`,
-        },
-      ]);
+          buyer_name: isAnonymous ? 'Anonymous Patron' : displayName,
+          email: email,
+          phone: phone || undefined,
+          purpose: `Support ${artworkTitle.slice(0, 20)}|${artworkId}`,
+          artwork_id: artworkId,
+          tier_amount: selectedTier,
+        }),
+      });
 
-      if (error) throw error;
+      const data = await response.json();
 
-      onSupport?.(supporter);
-      setStep('success');
-    } catch (err) {
-      console.error('Support error:', err);
-      alert('Failed to process support. Please try again.');
-    } finally {
+      if (!response.ok || !data.longurl) {
+        // Show the actual error from the server
+        const errorMsg = data.error || 'Failed to create payment link';
+        throw new Error(errorMsg);
+      }
+
+      // Store pending support info in localStorage for after-payment handling
+      const supporterInfo = {
+        artwork_id: artworkId,
+        amount: selectedTier,
+        display_name: isAnonymous ? 'Anonymous Patron' : displayName,
+        email,
+        message: message || null,
+        badge: selectedTierData?.badge || 'Bronze Patron',
+        is_anonymous: isAnonymous,
+        avatar_url: avatarUrl,
+        payment_request_id: data.payment_request_id,
+      };
+      localStorage.setItem('pending_support', JSON.stringify(supporterInfo));
+
+      // Redirect to Instamojo payment page (REAL MONEY)
+      window.location.href = data.longurl;
+
+    } catch (err: any) {
+      console.error('Payment creation error:', err);
+      setErrorMsg(err.message || 'Failed to initialize payment. Please try again.');
       setProcessing(false);
+      setStep('details'); // Go back to details so user can retry
     }
   };
 
@@ -162,10 +182,13 @@ export default function SupportModal({
     setSelectedTier(99);
     setDisplayName('');
     setEmail('');
+    setPhone('');
     setMessage('');
     setIsAnonymous(false);
     setAvatarFile(null);
     setAvatarPreview('');
+    setErrorMsg('');
+    setProcessing(false);
     onClose();
   };
 
@@ -349,6 +372,19 @@ export default function SupportModal({
 
                   <div>
                     <label className="text-[10px] text-[#7a7a7a] tracking-[0.2em] uppercase font-sans-gallery block mb-2 font-semibold">
+                      Phone (optional)
+                    </label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-4 py-3 bg-[#f5f5f0] border border-[#d0d0d0] rounded-xl text-[#1a1a1a] text-sm placeholder:text-[#9a9a9a] focus:border-[#c9a96e] focus:outline-none transition-colors"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-[#7a7a7a] tracking-[0.2em] uppercase font-sans-gallery block mb-2 font-semibold">
                       Message to Artist (optional)
                     </label>
                     <textarea
@@ -376,6 +412,12 @@ export default function SupportModal({
                     <span className="text-sm text-[#7a7a7a]">Support anonymously (hides your name & photo)</span>
                   </label>
 
+                  {errorMsg && (
+                    <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg p-3">
+                      {errorMsg}
+                    </p>
+                  )}
+
                   <button
                     onClick={handleSupport}
                     disabled={processing || (!isAnonymous && !displayName.trim())}
@@ -392,8 +434,20 @@ export default function SupportModal({
                   </button>
 
                   <p className="text-[10px] text-[#7a7a7a] text-center">
-                    Secure payment via Razorpay. No login required.
+                    Secure payment via Instamojo. You will be redirected to complete the payment.
                   </p>
+                </motion.div>
+              )}
+
+              {step === 'processing' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-12"
+                >
+                  <Loader2 className="w-10 h-10 animate-spin text-[#c9a96e] mx-auto mb-4" />
+                  <p className="text-lg font-serif-display text-[#1a1a1a] mb-2">Creating Payment Link...</p>
+                  <p className="text-sm text-[#7a7a7a]">Redirecting to secure checkout...</p>
                 </motion.div>
               )}
 
