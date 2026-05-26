@@ -1,3 +1,4 @@
+// src/app/api/auction/bid/route.ts
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -6,15 +7,26 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// UUID validator
+const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { artwork_id, bidder_name, email, phone, bid_amount, message } = body;
 
-    // Validate required fields
-    if (!artwork_id || !bidder_name || !email || !bid_amount) {
+    // Validate artwork_id is UUID
+    if (!artwork_id || !isUUID(artwork_id)) {
       return NextResponse.json(
-        { error: 'Missing required fields: artwork_id, bidder_name, email, bid_amount' },
+        { error: 'Invalid artwork_id. Must be a valid UUID.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate required fields
+    if (!bidder_name || !email || !bid_amount) {
+      return NextResponse.json(
+        { error: 'Missing required fields: bidder_name, email, bid_amount' },
         { status: 400 }
       );
     }

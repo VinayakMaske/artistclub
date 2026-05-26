@@ -31,11 +31,21 @@ export default function AuctionBidModal({
 
   const minBid = currentHighestBid > 0 ? currentHighestBid + 500 : 5000;
 
+  // Check if we're in demo mode (artworkId is not a valid UUID)
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(artworkId);
+  const isDemo = !isUUID;
+
   const handleSubmit = async () => {
     // Validation
     if (!bidderName.trim()) { setErrorMsg('Please enter your name'); return; }
     if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErrorMsg('Please enter a valid email'); return; }
     if (!bidAmount || Number(bidAmount) < minBid) { setErrorMsg(`Minimum bid is ₹${minBid.toLocaleString()}`); return; }
+
+    // If demo mode, show success without API call
+    if (isDemo) {
+      setStep('success');
+      return;
+    }
 
     setStep('submitting');
     setErrorMsg('');
@@ -119,10 +129,15 @@ export default function AuctionBidModal({
               <h3 className="text-2xl font-serif-display text-[#1a1a1a] leading-tight font-semibold">
                 {artworkTitle}
               </h3>
-              <p className="text-sm text-[#7a7a7a] mt-1">by {artistName}</p>
+              <p className="text-sm text-[#7a1a1a] mt-1">by {artistName}</p>
               {currentHighestBid > 0 && (
                 <p className="text-xs text-[#c9a96e] mt-2 font-sans-gallery font-medium">
                   Current highest bid: ₹{currentHighestBid.toLocaleString()}
+                </p>
+              )}
+              {isDemo && (
+                <p className="text-[10px] text-[#c9a96e] mt-2 font-sans-gallery font-medium bg-[#c9a96e]/10 px-3 py-1 rounded-full inline-block">
+                  Demo Mode — Bid will not be saved
                 </p>
               )}
             </div>
@@ -230,11 +245,14 @@ export default function AuctionBidModal({
                     onClick={handleSubmit}
                     className="w-full mt-4 py-4 bg-[#1a1a1a] text-white font-semibold text-sm rounded-full hover:bg-[#c9a96e] hover:text-[#1a1a1a] transition-all duration-500 font-sans-gallery shadow-lg shadow-black/10 flex items-center justify-center gap-2"
                   >
-                    Place Bid <ArrowRight className="w-4 h-4" />
+                    {isDemo ? 'Place Demo Bid' : 'Place Bid'} <ArrowRight className="w-4 h-4" />
                   </button>
 
                   <p className="text-[10px] text-[#7a7a7a] text-center">
-                    Your bid will be reviewed by the artist before being displayed publicly.
+                    {isDemo 
+                      ? 'This is a demo. Bids will not be saved to the database.'
+                      : 'Your bid will be reviewed by the artist before being displayed publicly.'
+                    }
                   </p>
                 </motion.div>
               )}
@@ -258,9 +276,15 @@ export default function AuctionBidModal({
                   </div>
                   <h4 className="text-2xl font-serif-display text-[#1a1a1a] mb-2 font-semibold">Bid Placed!</h4>
                   <p className="text-sm text-[#4a4a4a] mb-6">
-                    Your bid of ₹{Number(bidAmount).toLocaleString()} has been submitted.
+                    {isDemo 
+                      ? `Your demo bid of ₹${Number(bidAmount).toLocaleString()} was simulated.`
+                      : `Your bid of ₹${Number(bidAmount).toLocaleString()} has been submitted.`
+                    }
                     <br />
-                    You will be notified via email once it is approved.
+                    {isDemo 
+                      ? 'Connect to Supabase to save real bids.'
+                      : 'You will be notified via email once it is approved.'
+                    }
                   </p>
                   <button
                     onClick={resetAndClose}

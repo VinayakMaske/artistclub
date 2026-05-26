@@ -1,3 +1,4 @@
+// src/app/admin/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -21,15 +22,16 @@ type AuctionBid = {
   status: string;
   is_winning_bid: boolean;
   created_at: string;
-};
-
-type Artwork = {
-  id: string;
-  title: string;
-  image_url: string;
-  artist_name: string;
-  winner_tag: string | null;
-  is_sold: boolean;
+  artwork: {
+    id: string;
+    title: string;
+    image_url: string;
+    winner_tag: string | null;
+    is_sold: boolean;
+    artist: {
+      full_name: string;
+    } | null;
+  } | null;
 };
 
 const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'fallback-password';
@@ -39,7 +41,6 @@ export default function AdminAuctionPage() {
   const [password, setPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [bids, setBids] = useState<AuctionBid[]>([]);
-  const [artworks, setArtworks] = useState<Artwork[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('pending');
@@ -79,13 +80,12 @@ export default function AdminAuctionPage() {
     localStorage.removeItem('admin_auth');
     setPassword('');
     setBids([]);
-    setArtworks([]);
   };
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch bids
+      // Fetch bids with CORRECT join syntax: artwork:artwork_id(...)
       let query = supabase
         .from('auction_bids')
         .select(`
@@ -99,7 +99,7 @@ export default function AdminAuctionPage() {
           status,
           is_winning_bid,
           created_at,
-          artwork:artworks(id, title, image_url, winner_tag, is_sold, artist:artists(full_name))
+          artwork:artwork_id(id, title, image_url, winner_tag, is_sold, artist:artist_id(full_name))
         `)
         .order('created_at', { ascending: false });
 
@@ -108,6 +108,13 @@ export default function AdminAuctionPage() {
       }
 
       const { data: bidsData, error: bidsError } = await query;
+
+      console.log('🔍 Admin bids data:', bidsData);
+      console.log('🔍 Admin bids error:', bidsError);
+
+      if (bidsError) {
+        console.error('❌ Fetch error:', bidsError);
+      }
 
       if (!bidsError && bidsData) {
         const formattedBids = bidsData.map((bid: any) => ({
@@ -126,6 +133,16 @@ export default function AdminAuctionPage() {
   const handleApprove = async (bidId: string) => {
     setProcessing(true);
     try {
+      // First get the bid to find artwork_id
+      const { data: bidData } = await supabase
+        .from('auction_bids')
+        .select('artwork_id')
+        .eq('id', bidId)
+        .single();
+
+      if (!bidData) throw new Error('Bid not found');
+
+      // Update this bid to approved
       const { error } = await supabase
         .from('auction_bids')
         .update({ status: 'approved' })
@@ -133,21 +150,17 @@ export default function AdminAuctionPage() {
 
       if (error) throw error;
 
-      // Reset other winning bids for same artwork
-      const bid = bids.find(b => b.id === bidId);
-      if (bid) {
-        await supabase
-          .from('auction_bids')
-          .update({ is_winning_bid: false })
-          .eq('artwork_id', bid.artwork_id)
-          .neq('id', bidId);
+      // Reset ALL other bids for same artwork to not winning
+      await supabase
+        .from('auction_bids')
+        .update({ is_winning_bid: false })
+        .eq('artwork_id', bidData.artwork_id);
 
-        // Set this as winning bid
-        await supabase
-          .from('auction_bids')
-          .update({ is_winning_bid: true })
-          .eq('id', bidId);
-      }
+      // Set this as the winning bid
+      await supabase
+        .from('auction_bids')
+        .update({ is_winning_bid: true })
+        .eq('id', bidId);
 
       fetchData();
     } catch (err) {
@@ -162,7 +175,7 @@ export default function AdminAuctionPage() {
     try {
       const { error } = await supabase
         .from('auction_bids')
-        .update({ status: 'rejected' })
+        .update({ status: 'rejected', is_winning_bid: false })
         .eq('id', bidId);
 
       if (error) throw error;
@@ -317,37 +330,6 @@ export default function AdminAuctionPage() {
       </header>
 
       <div className="max-w-[1400px] mx-auto px-6 py-8">
-        {/* Winner Tag Management */}
-        <div className="mb-8 p-6 bg-white rounded-xl border border-[#d0d0d0]">
-          <h2 className="text-lg font-serif-display text-[#1a1a1a] mb-4 font-semibold">Set Winner Tags</h2>
-          <p className="text-sm text-[#7a7a7a] mb-4 font-sans-gallery">
-            Assign Gold, Silver, or Bronze tags to artworks for the auction page display
-          </p>
-          <div className="flex gap-3">
-            <button
-              onClick={() => handleSetWinnerTag('artwork-id-here', 'gold')}
-              disabled={processing}
-              className="flex items-center gap-2 px-4 py-2 bg-[#c9a96e]/10 border border-[#c9a96e] rounded-full text-sm text-[#c9a96e] hover:bg-[#c9a96e] hover:text-white transition-all font-sans-gallery font-medium"
-            >
-              <Crown className="w-4 h-4" /> Gold
-            </button>
-            <button
-              onClick={() => handleSetWinnerTag('artwork-id-here', 'silver')}
-              disabled={processing}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 border border-gray-300 rounded-full text-sm text-gray-600 hover:bg-gray-400 hover:text-white transition-all font-sans-gallery font-medium"
-            >
-              <Medal className="w-4 h-4" /> Silver
-            </button>
-            <button
-              onClick={() => handleSetWinnerTag('artwork-id-here', 'bronze')}
-              disabled={processing}
-              className="flex items-center gap-2 px-4 py-2 bg-orange-50 border border-orange-300 rounded-full text-sm text-orange-600 hover:bg-orange-400 hover:text-white transition-all font-sans-gallery font-medium"
-            >
-              <Award className="w-4 h-4" /> Bronze
-            </button>
-          </div>
-        </div>
-
         {/* Bids List */}
         <div className="grid gap-4">
           <AnimatePresence>
@@ -365,7 +347,7 @@ export default function AdminAuctionPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <h3 className="font-serif-display text-lg text-[#1a1a1a] font-semibold">
                         {bid.bidder_name}
                       </h3>
@@ -382,6 +364,13 @@ export default function AdminAuctionPage() {
                         </span>
                       )}
                     </div>
+
+                    {/* Artwork info */}
+                    {bid.artwork && (
+                      <p className="text-xs text-[#c9a96e] font-sans-gallery font-medium mb-2">
+                        For: {bid.artwork.title} by {bid.artwork.artist?.full_name || 'Unknown'}
+                      </p>
+                    )}
 
                     <p className="text-sm text-[#7a7a7a] font-sans-gallery mb-1">
                       {bid.email} {bid.phone && `• ${bid.phone}`}
@@ -406,6 +395,57 @@ export default function AdminAuctionPage() {
                         minute: '2-digit',
                       })}
                     </p>
+
+                    {/* Winner Tag Section (per bid/artwork) */}
+                    {bid.status === 'approved' && bid.artwork && (
+                      <div className="mt-3 pt-3 border-t border-[#e8e8e8]">
+                        <p className="text-[10px] text-[#7a7a7a] font-sans-gallery mb-2 uppercase tracking-wider">
+                          Winner Tag for "{bid.artwork.title}"
+                        </p>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleSetWinnerTag(bid.artwork_id, 'gold')}
+                            disabled={processing}
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-sans-gallery font-medium transition-all ${
+                              bid.artwork.winner_tag === 'gold'
+                                ? 'bg-[#c9a96e] text-white'
+                                : 'bg-[#c9a96e]/10 border border-[#c9a96e] text-[#c9a96e] hover:bg-[#c9a96e] hover:text-white'
+                            }`}
+                          >
+                            <Crown className="w-3 h-3" /> Gold
+                          </button>
+                          <button
+                            onClick={() => handleSetWinnerTag(bid.artwork_id, 'silver')}
+                            disabled={processing}
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-sans-gallery font-medium transition-all ${
+                              bid.artwork.winner_tag === 'silver'
+                                ? 'bg-gray-400 text-white'
+                                : 'bg-gray-100 border border-gray-300 text-gray-600 hover:bg-gray-400 hover:text-white'
+                            }`}
+                          >
+                            <Medal className="w-3 h-3" /> Silver
+                          </button>
+                          <button
+                            onClick={() => handleSetWinnerTag(bid.artwork_id, 'bronze')}
+                            disabled={processing}
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-sans-gallery font-medium transition-all ${
+                              bid.artwork.winner_tag === 'bronze'
+                                ? 'bg-orange-400 text-white'
+                                : 'bg-orange-50 border border-orange-300 text-orange-600 hover:bg-orange-400 hover:text-white'
+                            }`}
+                          >
+                            <Award className="w-3 h-3" /> Bronze
+                          </button>
+                          <button
+                            onClick={() => handleSetWinnerTag(bid.artwork_id, null)}
+                            disabled={processing}
+                            className="px-3 py-1.5 rounded-full text-xs font-sans-gallery font-medium text-[#7a7a7a] hover:text-red-500 transition-all"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -439,7 +479,7 @@ export default function AdminAuctionPage() {
                       </button>
                     )}
 
-                    {bid.is_winning_bid && (
+                    {bid.is_winning_bid && !bid.artwork?.is_sold && (
                       <button
                         onClick={() => handleMarkSold(bid.artwork_id, bid.id)}
                         disabled={processing}
@@ -447,6 +487,12 @@ export default function AdminAuctionPage() {
                       >
                         <Star className="w-3 h-3" /> Mark Sold
                       </button>
+                    )}
+
+                    {bid.artwork?.is_sold && (
+                      <span className="px-4 py-2 bg-green-100 text-green-700 text-xs font-semibold rounded-full font-sans-gallery flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" /> Sold
+                      </span>
                     )}
                   </div>
                 </div>
