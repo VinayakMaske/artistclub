@@ -376,7 +376,7 @@ export default function ArtworkPage() {
       {useDemo && (
         <div className="bg-[#c9a96e]/10 border-b border-[#c9a96e]/20 py-2">
           <p className="text-center text-xs text-[#c9a96e] font-sans-gallery font-medium">
-            Demo Mode — Connect Supabase to see real data
+            Demo Mode
           </p>
         </div>
       )}
