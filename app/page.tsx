@@ -506,7 +506,7 @@ export default function HomePage() {
                 <Palette className="w-4 h-4 text-[#c9a96e]" />
               </div>
               <span className="text-sm font-serif-display text-[#1a1a1a] font-semibold">
-                Palette<span className="text-[#c9a96e]">Pune</span>
+                Artist<span className="text-[#c9a96e]">Club</span>
               </span>
             </div>
             <p className="text-[9px] md:text-[10px] text-[#7a7a7a] tracking-[0.2em] uppercase font-sans-gallery text-center font-medium">
