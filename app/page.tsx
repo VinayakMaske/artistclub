@@ -8,16 +8,20 @@ import Link from 'next/link';
 import MuseumNav from '@/components/MuseumNav';
 import { createBrowserClient } from '@supabase/ssr';
 
-type FeaturedArtwork = {
+type FeaturedHero = {
   id: string;
   title: string;
+  subtitle: string | null;
   image_url: string;
   artist_name: string;
+  cta_text: string;
+  cta_link: string;
 };
 
 export default function HomePage() {
   const heroRef = useRef<HTMLDivElement>(null);
-  const [featuredArtwork, setFeaturedArtwork] = useState<FeaturedArtwork | null>(null);
+  const [featuredHero, setFeaturedHero] = useState<FeaturedHero | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const { scrollYProgress } = useScroll({
     target: heroRef,
@@ -35,36 +39,35 @@ export default function HomePage() {
   );
 
   useEffect(() => {
-    async function fetchFeatured() {
+    async function fetchFeaturedHero() {
       try {
         const { data, error } = await supabase
-          .from('artworks')
-          .select(`
-            id,
-            title,
-            image_url,
-            artist:artists(full_name)
-          `)
-          .eq('status', 'live')
-          .eq('is_featured', true)
+          .from('featured_hero')
+          .select('*')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
           .limit(1)
           .single();
 
         if (!error && data) {
-          const artistData = Array.isArray(data.artist) ? data.artist[0] : data.artist;
-          setFeaturedArtwork({
+          setFeaturedHero({
             id: data.id,
             title: data.title,
+            subtitle: data.subtitle,
             image_url: data.image_url,
-            artist_name: artistData?.full_name || 'Unknown Artist',
+            artist_name: data.artist_name,
+            cta_text: data.cta_text || 'Enter the Gallery',
+            cta_link: data.cta_link || '/gallery',
           });
         }
       } catch (err) {
-        console.error('Featured fetch error:', err);
+        console.error('Featured hero fetch error:', err);
+      } finally {
+        setLoading(false);
       }
     }
 
-    fetchFeatured();
+    fetchFeaturedHero();
   }, [supabase]);
 
   return (
@@ -255,21 +258,21 @@ export default function HomePage() {
               transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
               className="order-1 lg:order-2"
             >
-              {/* REAL gallery frame with FEATURED ARTWORK */}
+              {/* REAL gallery frame with FEATURED HERO IMAGE */}
               <div className="gallery-frame rounded-sm overflow-hidden bg-white max-w-[400px] mx-auto lg:max-w-none">
                 <div className="m-4">
                   <div className="aspect-[4/5] bg-gradient-to-br from-[#f5f5f0] to-[#e8e4dc] relative overflow-hidden">
-                    {featuredArtwork?.image_url ? (
-                      <Link href={`/artwork/${featuredArtwork.id}`} className="block w-full h-full">
+                    {featuredHero?.image_url ? (
+                      <Link href={featuredHero.cta_link} className="block w-full h-full">
                         <img
-                          src={featuredArtwork.image_url}
-                          alt={featuredArtwork.title}
+                          src={featuredHero.image_url}
+                          alt={featuredHero.title}
                           className="w-full h-full object-cover hover:scale-105 transition-transform duration-700"
                         />
-                        {/* Optional: artwork info overlay */}
+                        {/* Artwork info overlay */}
                         <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
-                          <p className="text-white text-sm font-serif-display font-semibold">{featuredArtwork.title}</p>
-                          <p className="text-white/80 text-xs font-sans-gallery">{featuredArtwork.artist_name}</p>
+                          <p className="text-white text-sm font-serif-display font-semibold">{featuredHero.title}</p>
+                          <p className="text-white/80 text-xs font-sans-gallery">{featuredHero.artist_name}</p>
                         </div>
                       </Link>
                     ) : (
