@@ -428,7 +428,7 @@ export default function HomePage() {
 
               <div className="grid grid-cols-2 gap-3 md:gap-4 mb-8 md:mb-10">
                 {[
-                  { icon: Paintbrush, label: 'Direct Patronage', desc: 'Keep 70% of all support' },
+                  { icon: Paintbrush, label: 'Direct Patronage', desc: "Recieve the support from art lovers, collectors and artist's" },
                   { icon: Eye, label: 'Community Exposure', desc: '1,000+ potential patrons' },
                   { icon: Heart, label: 'Fair Competition', desc: 'Community decides, not judges' },
                   { icon: Star, label: 'Artist of the Month', desc: 'Featured + bonus commission' },
