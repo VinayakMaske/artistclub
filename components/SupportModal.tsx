@@ -29,28 +29,24 @@ const TIERS = [
     amount: 49,
     name: 'Appreciator',
     icon: Eye,
-    desc: 'Your name on the artwork page',
     badge: 'Bronze Patron',
   },
   {
     amount: 99,
     name: 'Supporter',
     icon: Heart,
-    desc: 'High-res download + community access',
     badge: 'Silver Advocate',
   },
   {
     amount: 149,
     name: 'Patron',
     icon: Sparkles,
-    desc: 'Process video + artist AMA invite',
     badge: 'Gold Champion',
   },
   {
     amount: 199,
     name: 'Champion',
     icon: Crown,
-    desc: 'Personalized certificate + early access',
     badge: 'Diamond Benefactor',
   },
 ];
@@ -264,7 +260,6 @@ export default function SupportModal({
                             <span className="text-xl font-bold text-[#1a1a1a]">₹{tier.amount}</span>
                             <span className="text-xs text-[#7a7a7a] font-medium">{tier.name}</span>
                           </div>
-                          <p className="text-xs text-[#9a9a9a] mt-0.5">{tier.desc}</p>
                         </div>
                         {isSelected && (
                           <div className="w-6 h-6 rounded-full bg-[#c9a96e] flex items-center justify-center">
@@ -359,7 +354,7 @@ export default function SupportModal({
 
                   <div>
                     <label className="text-[10px] text-[#7a7a7a] tracking-[0.2em] uppercase font-sans-gallery block mb-2 font-semibold">
-                      Email (optional, for receipt)
+                      Email *
                     </label>
                     <input
                       type="email"

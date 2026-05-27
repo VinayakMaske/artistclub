@@ -593,9 +593,12 @@ export default function ArtworkPage() {
                 >
                   <Gavel className="w-4 h-4 inline mr-2" />Place Bid
                 </button>
-                <button className="px-6 py-4 border-2 border-[#d0d0d0] rounded-xl text-[#7a7a7a] hover:text-[#1a1a1a] hover:border-[#1a1a1a] transition-all">
-                  <Share2 className="w-5 h-5" />
-                </button>
+                <button
+  onClick={() => navigator.clipboard.writeText(window.location.href).then(() => alert('Link copied!'))}
+  className="px-6 py-4 border-2 border-[#d0d0d0] rounded-xl text-[#7a7a7a] hover:text-[#1a1a1a] hover:border-[#1a1a1a] transition-all"
+>
+  <Share2 className="w-5 h-5" />
+</button>
               </div>
 
               {/* Auction History Link */}
