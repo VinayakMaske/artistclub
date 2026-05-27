@@ -32,6 +32,7 @@ type Artwork = {
   inspiration_story: string | null;
   is_sold: boolean;
   winner_tag: string | null;
+  minimum_bid: number; // ← NEW
   artist: {
     id: string;
     full_name: string;
@@ -80,6 +81,7 @@ const DEMO_ARTWORKS: Record<string, Artwork> = {
     inspiration_story: 'Created during the 2025 monsoon in Pune, watching the first rains from my studio window.',
     is_sold: false,
     winner_tag: null,
+    minimum_bid: 5000, // ← NEW
     artist: {
       id: 'a1',
       full_name: 'Aarav Mehta',
@@ -106,6 +108,7 @@ const DEMO_ARTWORKS: Record<string, Artwork> = {
     inspiration_story: 'Inspired by the duality of social media personas versus real life.',
     is_sold: false,
     winner_tag: null,
+    minimum_bid: 7500, // ← NEW
     artist: {
       id: 'a2',
       full_name: 'Priya Krishnan',
@@ -191,125 +194,125 @@ export default function ArtworkPage() {
     : null;
 
   useEffect(() => {
-  const id = params.id as string;
-  console.log('🔍 Page ID from URL:', id);
+    const id = params.id as string;
+    console.log('🔍 Page ID from URL:', id);
 
-  async function fetchData() {
-    try {
-      // If no Supabase client (env vars missing), go straight to demo
-      if (!supabase) {
-        console.error('❌ Supabase client not created — env vars missing');
-        throw new Error('Supabase not configured');
-      }
-
-      // Check if ID is a valid UUID format
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-      console.log('🔍 Is valid UUID:', isUUID);
-
-      let artworkData: any = null;
-
-      if (isUUID) {
-        // Fetch from Supabase using UUID
-        const { data, error } = await supabase
-          .from('artworks')
-          .select(`
-            *,
-            artist:artist_id(id, full_name, city, avatar_url, bio)
-          `)
-          .eq('id', id)
-          .maybeSingle();
-
-        console.log('🔍 Supabase data:', data);
-        console.log('🔍 Supabase error:', error);
-
-        if (error) {
-          console.error('❌ Supabase error:', JSON.stringify(error, null, 2));
-          throw new Error('Database query failed');
+    async function fetchData() {
+      try {
+        // If no Supabase client (env vars missing), go straight to demo
+        if (!supabase) {
+          console.error('❌ Supabase client not created — env vars missing');
+          throw new Error('Supabase not configured');
         }
 
-        artworkData = data;
-      } else {
-        console.log('🔍 ID is not UUID, skipping Supabase query');
-      }
+        // Check if ID is a valid UUID format
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+        console.log('🔍 Is valid UUID:', isUUID);
 
-      // If no data from Supabase (or invalid ID), use demo data
-      if (!artworkData) {
-        console.log('🔍 Falling back to demo data for ID:', id);
-        const demoArtwork = DEMO_ARTWORKS[id];
-        
-        if (!demoArtwork) {
-          console.error('❌ No demo artwork found for ID:', id);
-          throw new Error('Artwork not found');
+        let artworkData: any = null;
+
+        if (isUUID) {
+          // Fetch from Supabase using UUID
+          const { data, error } = await supabase
+            .from('artworks')
+            .select(`
+              *,
+              artist:artist_id(id, full_name, city, avatar_url, bio)
+            `)
+            .eq('id', id)
+            .maybeSingle();
+
+          console.log('🔍 Supabase data:', data);
+          console.log('🔍 Supabase error:', error);
+
+          if (error) {
+            console.error('❌ Supabase error:', JSON.stringify(error, null, 2));
+            throw new Error('Database query failed');
+          }
+
+          artworkData = data;
+        } else {
+          console.log('🔍 ID is not UUID, skipping Supabase query');
         }
 
-        setArtwork(demoArtwork);
+        // If no data from Supabase (or invalid ID), use demo data
+        if (!artworkData) {
+          console.log('🔍 Falling back to demo data for ID:', id);
+          const demoArtwork = DEMO_ARTWORKS[id];
+          
+          if (!demoArtwork) {
+            console.error('❌ No demo artwork found for ID:', id);
+            throw new Error('Artwork not found');
+          }
+
+          setArtwork(demoArtwork);
+          setSupporters(DEMO_SUPPORTERS);
+          setAuctionBids(DEMO_AUCTION_BIDS);
+          setUseDemo(true);
+          setLoading(false);
+          return; // Exit early, skip Supabase sub-queries
+        }
+
+        // Handle artist relation (Supabase returns array for joined data)
+        const artistData = Array.isArray(artworkData.artist)
+          ? artworkData.artist[0]
+          : artworkData.artist;
+
+        setArtwork({
+          ...artworkData,
+          artist: artistData,
+        });
+
+        // Fetch supporters for this artwork
+        const { data: supportersData, error: supportersError } = await supabase
+          .from('supporters')
+          .select('id, display_name, amount, message, avatar_url, is_anonymous, created_at')
+          .eq('artwork_id', id)
+          .eq('payment_status', 'completed')
+          .order('created_at', { ascending: false });
+
+        if (!supportersError && supportersData) {
+          const badgeMap: Record<number, string> = {
+            49: 'Bronze Patron',
+            99: 'Silver Advocate',
+            149: 'Gold Champion',
+            199: 'Diamond Benefactor',
+          };
+
+          const formattedSupporters: Supporter[] = supportersData.map((s: any) => ({
+            ...s,
+            badge: badgeMap[s.amount] || 'Bronze Patron',
+          }));
+
+          setSupporters(formattedSupporters);
+        }
+
+        // Fetch approved auction bids for this artwork
+        const { data: bidsData, error: bidsError } = await supabase
+          .from('auction_bids')
+          .select('id, bidder_name, bid_amount, message, is_winning_bid, created_at')
+          .eq('artwork_id', id)
+          .eq('status', 'approved')
+          .order('bid_amount', { ascending: false });
+
+        if (!bidsError && bidsData) {
+          setAuctionBids(bidsData);
+        }
+
+        setUseDemo(false);
+      } catch (err) {
+        console.error('Fetch error:', err);
+        setUseDemo(true);
+        setArtwork(DEMO_ARTWORKS[id] || null);
         setSupporters(DEMO_SUPPORTERS);
         setAuctionBids(DEMO_AUCTION_BIDS);
-        setUseDemo(true);
+      } finally {
         setLoading(false);
-        return; // Exit early, skip Supabase sub-queries
       }
-
-      // Handle artist relation (Supabase returns array for joined data)
-      const artistData = Array.isArray(artworkData.artist)
-        ? artworkData.artist[0]
-        : artworkData.artist;
-
-      setArtwork({
-        ...artworkData,
-        artist: artistData,
-      });
-
-      // Fetch supporters for this artwork
-      const { data: supportersData, error: supportersError } = await supabase
-        .from('supporters')
-        .select('id, display_name, amount, message, avatar_url, is_anonymous, created_at')
-        .eq('artwork_id', id)
-        .eq('payment_status', 'completed')
-        .order('created_at', { ascending: false });
-
-      if (!supportersError && supportersData) {
-        const badgeMap: Record<number, string> = {
-          49: 'Bronze Patron',
-          99: 'Silver Advocate',
-          149: 'Gold Champion',
-          199: 'Diamond Benefactor',
-        };
-
-        const formattedSupporters: Supporter[] = supportersData.map((s: any) => ({
-          ...s,
-          badge: badgeMap[s.amount] || 'Bronze Patron',
-        }));
-
-        setSupporters(formattedSupporters);
-      }
-
-      // Fetch approved auction bids for this artwork
-      const { data: bidsData, error: bidsError } = await supabase
-        .from('auction_bids')
-        .select('id, bidder_name, bid_amount, message, is_winning_bid, created_at')
-        .eq('artwork_id', id)
-        .eq('status', 'approved')
-        .order('bid_amount', { ascending: false });
-
-      if (!bidsError && bidsData) {
-        setAuctionBids(bidsData);
-      }
-
-      setUseDemo(false);
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setUseDemo(true);
-      setArtwork(DEMO_ARTWORKS[id] || null);
-      setSupporters(DEMO_SUPPORTERS);
-      setAuctionBids(DEMO_AUCTION_BIDS);
-    } finally {
-      setLoading(false);
     }
-  }
 
-  fetchData();
-}, [params.id, supabase]);
+    fetchData();
+  }, [params.id, supabase]);
 
   const handleNewSupport = (newSupporter: {
     id: string;
@@ -564,6 +567,18 @@ export default function ArtworkPage() {
                 </div>
               )}
 
+              {/* Minimum Bid Info */}
+              {!artwork.is_sold && (
+                <div className="p-4 rounded-xl bg-[#f0ece4]/50 border border-[#c9a96e]/20">
+                  <div className="flex items-center gap-2">
+                    <Gavel className="w-4 h-4 text-[#c9a96e]" />
+                    <span className="text-sm text-[#4a4a4a] font-sans-gallery">
+                      Minimum starting bid: <span className="font-semibold text-[#1a1a1a]">₹{artwork.minimum_bid?.toLocaleString() || '5000'}</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="flex items-center gap-3 pt-4">
                 <button
@@ -781,6 +796,7 @@ export default function ArtworkPage() {
         artworkId={artwork.id}
         artistName={artwork.artist?.full_name || 'Unknown'}
         currentHighestBid={highestBid}
+        minimumBid={artwork.minimum_bid || 5000} // ← NEW: Pass minimum bid to modal
       />
     </main>
   );

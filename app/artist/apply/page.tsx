@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Palette, ArrowRight, CheckCircle, Upload, User, Mail,
   MapPin, FileText, Link as LinkIcon, Image as ImageIcon,
-  X, Loader2, Paintbrush, Clock, Sparkles, Heart
+  X, Loader2, Paintbrush, Clock, Sparkles, Heart, Gavel
 } from 'lucide-react';
 import Link from 'next/link';
 import MuseumNav from '@/components/MuseumNav';
@@ -35,6 +35,7 @@ export default function ArtistApplyPage() {
     materialsUsed: '',
     hoursInvested: '',
     inspirationStory: '',
+    minimumBid: '', // ← NEW: Minimum bid amount
   });
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -111,6 +112,13 @@ export default function ArtistApplyPage() {
     if (!formData.medium.trim()) newErrors.medium = 'Medium is required';
     if (!formData.messageDelivers.trim()) newErrors.messageDelivers = 'What this painting means is required';
     
+    // Validate minimum bid
+    if (!formData.minimumBid.trim()) {
+      newErrors.minimumBid = 'Minimum bid amount is required';
+    } else if (Number(formData.minimumBid) < 500) {
+      newErrors.minimumBid = 'Minimum bid must be at least ₹500';
+    }
+
     if (!avatarFile && !avatarPreview) newErrors.avatar = 'Profile photo is required';
     if (!artworkFile && !artworkPreview) newErrors.artwork = 'Artwork image is required';
 
@@ -162,6 +170,9 @@ export default function ArtistApplyPage() {
           materials_used: materialsArray.length > 0 ? materialsArray : null,
           hours_invested: formData.hoursInvested ? parseInt(formData.hoursInvested) : null,
           inspiration_story: formData.inspirationStory || null,
+          
+          // NEW: Save minimum bid to application (will be transferred to artworks when approved)
+          minimum_bid: Number(formData.minimumBid),
           
           status: 'pending'
         }]);
@@ -463,6 +474,29 @@ export default function ArtistApplyPage() {
                           className={inputClasses('hoursInvested', true)}
                         />
                       </div>
+                    </div>
+
+                    {/* === NEW: Minimum Bid Amount === */}
+                    <div>
+                      <label className={labelClasses}>Minimum Bid Amount *</label>
+                      <div className="relative">
+                        <Gavel className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#c9a96e]" />
+                        <div className="relative">
+                          <span className="absolute left-11 top-1/2 -translate-y-1/2 text-[#1a1a1a] font-semibold text-sm">₹</span>
+                          <input
+                            type="number"
+                            value={formData.minimumBid}
+                            onChange={(e) => handleChange('minimumBid', e.target.value)}
+                            placeholder="5000"
+                            min="500"
+                            className={`${inputClasses('minimumBid', true)} pl-14`}
+                          />
+                        </div>
+                      </div>
+                      {errors.minimumBid && <p className="text-xs text-red-500 mt-1">{errors.minimumBid}</p>}
+                      <p className="text-xs text-[#7a7a7a] mt-1 font-sans-gallery">
+                        Minimum ₹500. This is the starting bid buyers will see.
+                      </p>
                     </div>
 
                     {/* Artwork Image Upload */}

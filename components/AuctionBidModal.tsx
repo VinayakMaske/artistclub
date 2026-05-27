@@ -11,6 +11,7 @@ interface AuctionBidModalProps {
   artworkId: string;
   artistName: string;
   currentHighestBid?: number;
+  minimumBid?: number; // ← NEW
 }
 
 export default function AuctionBidModal({
@@ -20,6 +21,7 @@ export default function AuctionBidModal({
   artworkId,
   artistName,
   currentHighestBid = 0,
+  minimumBid = 5000, // ← NEW: Default fallback
 }: AuctionBidModalProps) {
   const [bidderName, setBidderName] = useState('');
   const [email, setEmail] = useState('');
@@ -29,7 +31,8 @@ export default function AuctionBidModal({
   const [step, setStep] = useState<'form' | 'submitting' | 'success'>('form');
   const [errorMsg, setErrorMsg] = useState('');
 
-  const minBid = currentHighestBid > 0 ? currentHighestBid + 500 : 5000;
+  // Calculate minimum bid: either current highest + 500, or artwork's minimum bid
+  const minBid = currentHighestBid > 0 ? currentHighestBid + 500 : minimumBid;
 
   // Check if we're in demo mode (artworkId is not a valid UUID)
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(artworkId);
@@ -130,11 +133,19 @@ export default function AuctionBidModal({
                 {artworkTitle}
               </h3>
               <p className="text-sm text-[#7a1a1a] mt-1">by {artistName}</p>
-              {currentHighestBid > 0 && (
-                <p className="text-xs text-[#c9a96e] mt-2 font-sans-gallery font-medium">
-                  Current highest bid: ₹{currentHighestBid.toLocaleString()}
+              
+              {/* Show minimum bid info */}
+              <div className="mt-3 space-y-1">
+                {currentHighestBid > 0 && (
+                  <p className="text-xs text-[#c9a96e] font-sans-gallery font-medium">
+                    Current highest bid: ₹{currentHighestBid.toLocaleString()}
+                  </p>
+                )}
+                <p className="text-xs text-[#7a7a7a] font-sans-gallery">
+                  Minimum starting bid: ₹{minimumBid.toLocaleString()}
                 </p>
-              )}
+              </div>
+
               {isDemo && (
                 <p className="text-[10px] text-[#c9a96e] mt-2 font-sans-gallery font-medium bg-[#c9a96e]/10 px-3 py-1 rounded-full inline-block">
                   Demo Mode — Bid will not be saved
@@ -163,7 +174,10 @@ export default function AuctionBidModal({
                       />
                     </div>
                     <p className="text-[10px] text-[#7a7a7a] mt-1 font-sans-gallery">
-                      Minimum bid: ₹{minBid.toLocaleString()}
+                      {currentHighestBid > 0 
+                        ? `Must be at least ₹${minBid.toLocaleString()} (₹500 above current highest)`
+                        : `Minimum starting bid: ₹${minimumBid.toLocaleString()}`
+                      }
                     </p>
                   </div>
 
